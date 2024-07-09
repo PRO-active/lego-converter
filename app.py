@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 from PIL import Image, ImageOps
+from streamlit_cropper import st_cropper
 import cv2
 
 uploaded_file = st.file_uploader("画像をアップロードしてください", type=["jpg", "jpeg", "png"])
@@ -8,7 +9,7 @@ if uploaded_file is not None:
     image = Image.open(uploaded_file)
     st.image(image, caption='アップロードされた画像', use_column_width=True)
 
-    cropped_image = st.image_crop(image, aspect_ratio=1.0)
+    cropped_image = st_cropper(image, aspect_ratio=(1, 1))
     st.image(cropped_image, caption='トリミングされた画像', use_column_width=True)
     
     cropped_image = cropped_image.resize((48, 48), Image.ANTIALIAS)
