@@ -1,6 +1,6 @@
 import streamlit as st
 import numpy as np
-from PIL import Image, ImageOps, ImageResampling
+from PIL import Image, ImageOps
 from streamlit_cropper import st_cropper
 import cv2
 
@@ -12,7 +12,7 @@ if uploaded_file is not None:
     cropped_image = st_cropper(image, aspect_ratio=(1, 1))
     st.image(cropped_image, caption='トリミングされた画像', use_column_width=True)
     if st.button("レゴブロックの設計図を生成"):
-      cropped_image = cropped_image.resize((48, 48), ImageResampling.LANCZOS)
+      cropped_image = cropped_image.resize((48, 48), Image.LANCZOS)
       
       img_array = np.array(cropped_image.convert("RGB"))
 
