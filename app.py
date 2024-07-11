@@ -47,6 +47,38 @@ def convert_to_lego_colors(img_array, color_set):
 
   return lego_image_array
 
+def apply_dithering(image, palette):
+  image = image.convert('RGB')
+  width, height = image.size
+  data = np.array(image, dtype=np.float32)
+  new_image = Image.new('RGB', (width, height))
+  new_data = np.array(new_image)
+
+  for y in range(height):
+    for x in range(width):
+      old_pixel = data[y, x]
+      new_pixel = get_closest_palette_color(old_pixel, palette)
+      new_data[y, x] = new_pixel
+      quant_error = old_pixel - new_pixel
+
+      if x < width - 1:
+        data[y, x + 1] += quant_error * 7 / 16
+      if y < height - 1:
+        if x > 0:
+          data[y + 1, x - 1] += quant_error * 3 / 16
+        data[y + 1, x] += quant_error * 5 / 16
+        if x < width - 1:
+          data[y + 1, x + 1] += quant_error * 1 / 16
+
+  data = np.clip(data, 0, 255).astype(np.uint8)
+  new_image = Image.fromarray(new_data, 'RGB')
+  return new_image
+
+def get_closest_palette_color(pixel, palette):
+  distances = {color: np.linalg.norm(np.array(pixel) - np.array(rgb)) for color, rgb in palette.items()}
+  closest_color = min(distances, key=distances.get)
+  return np.array(palette[closest_color])
+
 uploaded_file = st.file_uploader("画像をアップロードしてください", type=["jpg", "jpeg", "png"])
 if uploaded_file is not None:
   image = Image.open(uploaded_file)
@@ -60,17 +92,14 @@ if uploaded_file is not None:
 
   if st.button("レゴブロックの設計図を生成"):
     cropped_image = cropped_image.resize((48, 48), Image.LANCZOS)
-    
     img_array = np.array(cropped_image.convert("RGB"))
 
     if selected_color_set is None:
       lego_image_array = img_array
     else:
       lego_image_array = convert_to_lego_colors(img_array, selected_color_set)
+      lego_image = Image.fromarray(lego_image_array.astype('uint8'), 'RGB')
+      lego_image = apply_dithering(lego_image, selected_color_set)
 
-    lego_image = Image.fromarray(lego_image_array.astype('uint8'), 'RGB')
     st.image(lego_image, caption='レゴブロックの設計図', use_column_width=True)
-
     st.download_button(label='設計図をダウンロード', data=lego_image.tobytes(), file_name='lego_design.png', mime='image/png')
-
-
