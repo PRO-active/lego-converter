@@ -95,7 +95,7 @@ if uploaded_file is not None:
     img_array = np.array(cropped_image.convert("RGB"))
 
     if selected_color_set is None:
-      lego_image_array = img_array
+      lego_image = cropped_image
     else:
       lego_image_array = convert_to_lego_colors(img_array, selected_color_set)
       lego_image = Image.fromarray(lego_image_array.astype('uint8'), 'RGB')
