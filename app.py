@@ -37,7 +37,7 @@ def select_color(pixel_value, color_set):
 def convert_to_lego_colors(img_array, color_set):
   gray_image = ImageOps.grayscale(Image.fromarray(img_array))
   gray_array = np.array(gray_image)
-  lego_image_array = np.zeros((48, 48, 3), dtype=np.uint8)
+  lego_image_array = np.zeros((img_array.shape[0], img_array.shape[1], 3), dtype=np.uint8)
 
   for i in range(img_array.shape[0]):
     for j in range(img_array.shape[1]):
@@ -89,9 +89,11 @@ if uploaded_file is not None:
 
   color_set_name = st.selectbox("変換後の色を選択してください", options=list(COLOR_SETS.keys()))
   selected_color_set = COLOR_SETS[color_set_name]
+  size_option = st.selectbox("ドット絵のサイズを選択してください", options=["48x48", "96x96"])
 
   if st.button("レゴブロックの設計図を生成"):
-    cropped_image = cropped_image.resize((48, 48), Image.LANCZOS)
+    size = (48, 48) if size_option == "48x48" else (96, 96)
+    cropped_image = cropped_image.resize(size, Image.LANCZOS)
     img_array = np.array(cropped_image.convert("RGB"))
 
     if selected_color_set is None:
