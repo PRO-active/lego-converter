@@ -38,12 +38,21 @@ def kmeans_color_quantization(image, color_set):
   kmeans = KMeans(n_clusters=len(color_set))
   labels = kmeans.fit_predict(pixels)
   new_colors = kmeans.cluster_centers_
-  
+
   color_mapping = {}
+  used_colors = set()
+
   for i, center in enumerate(new_colors):
     distances = {color: np.linalg.norm(center - np.array(rgb)) for color, rgb in color_set.items()}
     closest_color = min(distances, key=distances.get)
     color_mapping[i] = np.array(color_set[closest_color])
+    used_colors.add(closest_color)
+
+  unused_colors = set(color_set.keys()) - used_colors
+  if unused_colors:
+    for color in unused_colors:
+      least_used_index = min(color_mapping, key=lambda k: np.sum(np.all(image == color_mapping[k], axis=-1)))
+      color_mapping[least_used_index] = np.array(color_set[color])
 
   quantized = np.array([color_mapping[label] for label in labels])
   return quantized.reshape(image.shape)
