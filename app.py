@@ -1,6 +1,6 @@
 import streamlit as st
 import numpy as np
-from PIL import Image, ImageOps
+from PIL import Image
 from streamlit_cropper import st_cropper
 import cv2
 from sklearn.cluster import KMeans
@@ -33,50 +33,15 @@ def remove_background(image):
 def resize_image(image, size):
   return cv2.resize(image, size, interpolation=cv2.INTER_NEAREST)
 
-def kmeans_color_quantization(image, color_set):
-  pixels = image.reshape((-1, 3))
-  kmeans = KMeans(n_clusters=len(color_set))
-  labels = kmeans.fit_predict(pixels)
-  new_colors = kmeans.cluster_centers_
-
-  color_mapping = {}
-  used_colors = set()
-
-  for i, center in enumerate(new_colors):
-    distances = {color: np.linalg.norm(center - np.array(rgb)) for color, rgb in color_set.items()}
-    closest_color = min(distances, key=distances.get)
-    color_mapping[i] = np.array(color_set[closest_color])
-    used_colors.add(closest_color)
-
-  unused_colors = set(color_set.keys()) - used_colors
-  if unused_colors:
-    for color in unused_colors:
-      least_used_index = min(color_mapping, key=lambda k: np.sum(np.all(image == color_mapping[k], axis=-1)))
-      color_mapping[least_used_index] = np.array(color_set[color])
-
-  quantized = np.array([color_mapping[label] for label in labels])
-  return quantized.reshape(image.shape)
-
-def apply_dithering(image, color_set):
-  h, w, _ = image.shape
-  data = image.copy()
-  for y in range(h):
-    for x in range(w):
-      old_pixel = data[y, x].copy()
-      distances = {color: np.linalg.norm(old_pixel - np.array(rgb)) for color, rgb in color_set.items()}
+def replace_colors(image, color_set):
+  image = image.astype(float)
+  for y in range(image.shape[0]):
+    for x in range(image.shape[1]):
+      pixel = image[y, x]
+      distances = {color: np.linalg.norm(pixel - np.array(rgb)) for color, rgb in color_set.items()}
       closest_color = min(distances, key=distances.get)
-      new_pixel = np.array(color_set[closest_color])
-      data[y, x] = new_pixel
-      quant_error = old_pixel - new_pixel
-      if x + 1 < w:
-        data[y, x + 1] = np.clip(data[y, x + 1] + quant_error * 7 / 16, 0, 255)
-      if y + 1 < h:
-        if x > 0:
-          data[y + 1, x - 1] = np.clip(data[y + 1, x - 1] + quant_error * 3 / 16, 0, 255)
-        data[y + 1, x] = np.clip(data[y + 1, x] + quant_error * 5 / 16, 0, 255)
-        if x + 1 < w:
-          data[y + 1, x + 1] = np.clip(data[y + 1, x + 1] + quant_error * 1 / 16, 0, 255)
-  return data
+      image[y, x] = np.array(color_set[closest_color])
+  return image.astype(np.uint8)
 
 uploaded_file = st.file_uploader("画像をアップロードしてください", type=["jpg", "jpeg", "png"])
 if uploaded_file is not None:
@@ -96,8 +61,11 @@ if uploaded_file is not None:
     cropped_image = np.array(cropped_image)
     bg_removed_image = remove_background(cropped_image)
     resized_image = resize_image(bg_removed_image, size)
-    quantized_image = kmeans_color_quantization(resized_image, selected_color_set)
-    dithered_image = apply_dithering(quantized_image, selected_color_set)
-    final_image = Image.fromarray(dithered_image.astype('uint8'), 'RGB')
+    
+    replaced_image = replace_colors(resized_image, selected_color_set)
+    
+    final_image = Image.fromarray(replaced_image.astype('uint8'), 'RGB')
     st.image(final_image, caption='レゴブロックの設計図', use_column_width=True)
     st.download_button(label='設計図をダウンロード', data=final_image.tobytes(), file_name='lego_design.png', mime='image/png')
+
+
