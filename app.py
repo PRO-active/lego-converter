@@ -34,6 +34,7 @@ def resize_image(image, size):
   return cv2.resize(image, size, interpolation=cv2.INTER_NEAREST)
 
 def replace_colors(image, color_set):
+  original_shape = image.shape
   image = image.reshape((-1, 3))
   kmeans = KMeans(n_clusters=len(color_set))
   kmeans.fit(image)
@@ -43,7 +44,7 @@ def replace_colors(image, color_set):
   new_colors = np.array(list(color_set.values()))
   label_color_map = {i: new_colors[i] for i in range(len(new_colors))}
   replaced_image = np.array([label_color_map[label] for label in labels])
-  replaced_image = replaced_image.reshape((image.shape[0], image.shape[1], 3))
+  replaced_image = replaced_image.reshape(original_shape)
 
   return replaced_image.astype(np.uint8)
 
