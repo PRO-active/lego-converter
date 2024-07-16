@@ -34,14 +34,18 @@ def resize_image(image, size):
   return cv2.resize(image, size, interpolation=cv2.INTER_NEAREST)
 
 def replace_colors(image, color_set):
-  image = image.astype(float)
-  for y in range(image.shape[0]):
-    for x in range(image.shape[1]):
-      pixel = image[y, x]
-      distances = {color: np.linalg.norm(pixel - np.array(rgb)) for color, rgb in color_set.items()}
-      closest_color = min(distances, key=distances.get)
-      image[y, x] = np.array(color_set[closest_color])
-  return image.astype(np.uint8)
+  image = image.reshape((-1, 3))
+  kmeans = KMeans(n_clusters=len(color_set))
+  kmeans.fit(image)
+  centroids = kmeans.cluster_centers_
+  labels = kmeans.labels_
+
+  new_colors = np.array(list(color_set.values()))
+  label_color_map = {i: new_colors[i] for i in range(len(new_colors))}
+  replaced_image = np.array([label_color_map[label] for label in labels])
+  replaced_image = replaced_image.reshape((image.shape[0], image.shape[1], 3))
+
+  return replaced_image.astype(np.uint8)
 
 uploaded_file = st.file_uploader("画像をアップロードしてください", type=["jpg", "jpeg", "png"])
 if uploaded_file is not None:
@@ -67,5 +71,3 @@ if uploaded_file is not None:
     final_image = Image.fromarray(replaced_image.astype('uint8'), 'RGB')
     st.image(final_image, caption='レゴブロックの設計図', use_column_width=True)
     st.download_button(label='設計図をダウンロード', data=final_image.tobytes(), file_name='lego_design.png', mime='image/png')
-
-
