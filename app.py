@@ -1,6 +1,6 @@
 import streamlit as st
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 from streamlit_cropper import st_cropper
 import cv2
 from sklearn.cluster import KMeans
@@ -21,6 +21,8 @@ COLOR_SETS = {
 }
 
 def remove_background(image):
+  if image.shape[2] == 4:
+    image = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)  # RGBA to RGB
   mask = np.zeros(image.shape[:2], np.uint8)
   bgd_model = np.zeros((1, 65), np.float64)
   fgd_model = np.zeros((1, 65), np.float64)
@@ -51,6 +53,7 @@ def replace_colors(image, color_set):
 uploaded_file = st.file_uploader("画像をアップロードしてください", type=["jpg", "jpeg", "png"])
 if uploaded_file is not None:
   image = Image.open(uploaded_file)
+  image = ImageOps.exif_transpose(image)  # 画像の向きを修正
   st.image(image, caption='アップロードされた画像', use_column_width=True)
 
   cropped_image = st_cropper(image, aspect_ratio=(1, 1))
